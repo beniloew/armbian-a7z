@@ -346,6 +346,17 @@ function docker_cli_build_dockerfile() {
 		fi
 	fi
 
+	# Never pull from registry; use whatever is already local (fails if image is missing).
+	if [[ "${DOCKER_SKIP_PULL}" == "yes" ]]; then
+		local_image_sha="$(docker images --no-trunc --quiet "${DOCKER_ARMBIAN_BASE_IMAGE}")"
+		if [[ -n "${local_image_sha}" ]]; then
+			display_alert "Skipping docker pull" "DOCKER_SKIP_PULL=yes; using ${DOCKER_ARMBIAN_BASE_IMAGE}" "info"
+			do_force_pull="no"
+		else
+			exit_with_error "DOCKER_SKIP_PULL=yes but base image is not present locally" "${DOCKER_ARMBIAN_BASE_IMAGE}"
+		fi
+	fi
+
 	if [[ "${do_force_pull:-yes}" == "yes" ]]; then
 		display_alert "Pulling" "${DOCKER_ARMBIAN_BASE_IMAGE}" "info"
 		local pull_failed="yes"
