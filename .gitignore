@@ -17,11 +17,18 @@ ubuntu-*-cloudimg-console.log
 /cache/
 /*userpatches*/
 /userpatches
-# Track Orange Pi 5 user package list template (rest of userpatches/ stays ignored)
+# Track Orange Pi 5 family userpatch templates (rest of userpatches/ stays ignored)
 !/userpatches/
 !/userpatches/config/
 !/userpatches/config/boards/
+!/userpatches/config/boards/include/
+!/userpatches/config/boards/include/orangepi5-family.conf
 !/userpatches/config/boards/orangepi5.conf
+!/userpatches/config/boards/orangepi5-plus.conf
+!/userpatches/config/boards/orangepi5b.csc
+!/userpatches/config/boards/orangepi5-max.csc
+!/userpatches/config/boards/orangepi5-ultra.csc
+!/userpatches/config/boards/orangepi5pro.csc
 
 ### General annoyances ###
 .DS_Store

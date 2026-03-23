@@ -1,3 +1,3 @@
-# Orange Pi 5 — local overrides (shared defaults: include/orangepi5-family.conf)
+# Orange Pi 5 Pro — local overrides (shared defaults: include/orangepi5-family.conf)
 # shellcheck source=userpatches/config/boards/include/orangepi5-family.conf
 source "${USERPATCHES_PATH}/config/boards/include/orangepi5-family.conf"
