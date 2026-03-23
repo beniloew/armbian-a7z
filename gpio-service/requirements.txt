@@ -1,1 +1,2 @@
-python-periphery>=2.4.0
+gpiod>=2.4
+pyyaml>=6

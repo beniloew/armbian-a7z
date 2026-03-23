@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Install gpio-service on the target board (e.g. Radxa Cubie A7Z).
-# Requires Linux GPIO character devices (/dev/gpiochip*). Run on the device: sudo ./install.sh
+# Install gpio-service on the target board.
+# Requires Linux GPIO character devices (/dev/gpiochip*).
+# Run on the device: sudo ./install.sh
 
 set -euo pipefail
 
@@ -13,8 +14,8 @@ usage() {
 	cat <<EOF
 Usage: sudo $0 [options]
 
-Installs ${INSTALL_ROOT}, creates a Python venv, installs python-periphery, and
-installs systemd unit gpio.service.
+Installs the gpioctl library and app.py to ${INSTALL_ROOT}, creates a Python
+venv, installs the gpiod dependency, and sets up the gpio.service systemd unit.
 
 Options:
   --prefix=PATH   Install under PATH (default: /opt/gpio-service).
@@ -62,18 +63,36 @@ if ! command -v python3 >/dev/null 2>&1; then
 	exit 1
 fi
 
+if ! python3 -c "import ensurepip" 2>/dev/null; then
+	echo "python3-venv (ensurepip) is required: apt install python3-venv" >&2
+	exit 1
+fi
+
 echo "Installing to ${INSTALL_ROOT}"
 
 mkdir -p "${INSTALL_ROOT}"
-install -m 0644 "${SCRIPT_DIR}/gpio_service.py" "${INSTALL_ROOT}/gpio_service.py"
+
+install -m 0755 "${SCRIPT_DIR}/app.py" "${INSTALL_ROOT}/app.py"
+install -m 0644 "${SCRIPT_DIR}/config.yaml" "${INSTALL_ROOT}/config.yaml"
 install -m 0644 "${SCRIPT_DIR}/requirements.txt" "${INSTALL_ROOT}/requirements.txt"
 
-if [[ ! -d "${INSTALL_ROOT}/venv" ]]; then
+mkdir -p "${INSTALL_ROOT}/gpioctl"
+for f in __init__.py pins.py pwm.py service.py; do
+	install -m 0644 "${SCRIPT_DIR}/gpioctl/${f}" "${INSTALL_ROOT}/gpioctl/${f}"
+done
+
+if [[ ! -d "${INSTALL_ROOT}/venv" ]] || [[ ! -s "${INSTALL_ROOT}/venv/bin/pip" ]]; then
+	rm -rf "${INSTALL_ROOT}/venv"
 	python3 -m venv "${INSTALL_ROOT}/venv"
 fi
 
 "${INSTALL_ROOT}/venv/bin/pip" install --upgrade pip -q
 "${INSTALL_ROOT}/venv/bin/pip" install -r "${INSTALL_ROOT}/requirements.txt"
+
+if ! "${INSTALL_ROOT}/venv/bin/python3" -c "import gpiod" 2>/dev/null; then
+	echo "gpiod install failed (try: rm -rf ${INSTALL_ROOT}/venv && re-run)" >&2
+	exit 1
+fi
 
 sed "s|/opt/gpio-service|${INSTALL_ROOT}|g" "${SCRIPT_DIR}/gpio.service" \
 	>/etc/systemd/system/gpio.service

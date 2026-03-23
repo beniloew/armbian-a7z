@@ -1,0 +1,9 @@
+api:
+  port: 9010
+
+servo:
+  pwm_device: "febf0010"    # device address (ls /sys/class/pwm/pwmchip*/device)
+  pwm_channel: 0
+  frequency_hz: 50
+  pressed_us: 2000.0
+  released_us: 1900.0

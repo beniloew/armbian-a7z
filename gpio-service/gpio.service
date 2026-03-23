@@ -4,15 +4,9 @@ After=multi-user.target
 
 [Service]
 Type=simple
-ExecStart=/opt/gpio-service/venv/bin/python3 /opt/gpio-service/gpio_service.py
+ExecStart=/opt/gpio-service/venv/bin/python3 /opt/gpio-service/app.py
 Restart=on-failure
 RestartSec=2
-
-# Line offsets on this chip — set to match your wiring (use `gpioinfo` on the board).
-Environment=GPIO_CHIP=/dev/gpiochip0
-Environment=GPIO_POWER_BUTTON_LINE=0
-Environment=GPIO_POWER_CUTOFF_LINE=1
-Environment=GPIO_DEBOUNCE_MS=25
 
 [Install]
 WantedBy=multi-user.target
