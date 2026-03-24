@@ -43,6 +43,14 @@ ubuntu-*-cloudimg-console.log
 Dockerfile
 .dockerignore
 
+# Overlay files tracked in git
+!/userpatches/overlay/
+!/userpatches/overlay/wfb-ng/
+!/userpatches/overlay/wfb-ng/README.md
+
+# Cached driver artifacts (binary, local-only)
+userpatches/overlay/wfb-ng/*.ko
+
 # Seeded from config/templates; keep local copies private (must be after userpatches/ un-ignore rules)
 userpatches/customize-image.sh
 userpatches/config-example.conf

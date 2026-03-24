@@ -1,0 +1,2 @@
+gpiod>=2.4
+pyyaml>=6
