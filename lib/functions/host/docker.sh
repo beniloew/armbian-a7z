@@ -128,10 +128,10 @@ function docker_cli_prepare() {
 	# @TODO: Make sure we can access docker, on Linux; gotta be part of 'docker' group: grep -q "$(whoami)" <(getent group docker)
 
 	declare -g DOCKER_ARMBIAN_INITIAL_IMAGE_TAG="armbian.local.only/armbian-build:initial"
-	# declare -g DOCKER_ARMBIAN_BASE_IMAGE="${DOCKER_ARMBIAN_BASE_IMAGE:-"debian:trixie"}"
+	declare -g DOCKER_ARMBIAN_BASE_IMAGE="${DOCKER_ARMBIAN_BASE_IMAGE:-"debian:trixie"}"
 	# declare -g DOCKER_ARMBIAN_BASE_IMAGE="${DOCKER_ARMBIAN_BASE_IMAGE:-"debian:bookworm"}"
 	# declare -g DOCKER_ARMBIAN_BASE_IMAGE="${DOCKER_ARMBIAN_BASE_IMAGE:-"debian:sid"}"
-	declare -g DOCKER_ARMBIAN_BASE_IMAGE="${DOCKER_ARMBIAN_BASE_IMAGE:-"ubuntu:noble"}"
+	# declare -g DOCKER_ARMBIAN_BASE_IMAGE="${DOCKER_ARMBIAN_BASE_IMAGE:-"ubuntu:noble"}"
 	declare -g DOCKER_ARMBIAN_TARGET_PATH="${DOCKER_ARMBIAN_TARGET_PATH:-"/armbian"}"
 
 	declare wanted_os_tag="${DOCKER_ARMBIAN_BASE_IMAGE%%:*}"
@@ -343,6 +343,17 @@ function docker_cli_build_dockerfile() {
 		else
 			display_alert "Armbian docker image" "does not exist: ${DOCKER_ARMBIAN_BASE_IMAGE}" "info"
 			do_force_pull="yes"
+		fi
+	fi
+
+	# Never pull from registry; use whatever is already local (fails if image is missing).
+	if [[ "${DOCKER_SKIP_PULL}" == "yes" ]]; then
+		local_image_sha="$(docker images --no-trunc --quiet "${DOCKER_ARMBIAN_BASE_IMAGE}")"
+		if [[ -n "${local_image_sha}" ]]; then
+			display_alert "Skipping docker pull" "DOCKER_SKIP_PULL=yes; using ${DOCKER_ARMBIAN_BASE_IMAGE}" "info"
+			do_force_pull="no"
+		else
+			exit_with_error "DOCKER_SKIP_PULL=yes but base image is not present locally" "${DOCKER_ARMBIAN_BASE_IMAGE}"
 		fi
 	fi
 

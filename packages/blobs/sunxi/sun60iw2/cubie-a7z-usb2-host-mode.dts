@@ -1,0 +1,18 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+	metadata {
+		title = "Set USB 2.0 Type-C to host mode";
+		compatible = "radxa,cubie-a7z";
+		category = "misc";
+		exclusive = "usbc0";
+		description = "Switch the USB 2.0 Type-C port from device (gadget) mode to host mode, allowing it to connect USB peripherals. Note: FEL firmware flashing will not work while this overlay is active.";
+	};
+};
+
+&usbc0 {
+	usb_port_type = <0x00000001>;
+	usb_detect_type = <0x00000000>;
+	usb_detect_mode = <0x00000000>;
+};
