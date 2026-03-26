@@ -98,14 +98,15 @@ wifi_txpower = -1000      # TX power for 8812au: -dBm * 100 (see TX power sectio
 
 ### Stream architecture
 
-WFB-NG provides three built-in communication channels, each mapped to
+WFB-NG provides three built-in communication channels(serial is extra), each mapped to
 a pair of radio stream IDs:
 
-| Channel | Drone TX stream | GS TX stream | Description |
-|---------|-----------------|--------------|-------------|
-| **video** | `0x00` (0) | — | One-way, drone to GS |
-| **mavlink** | `0x10` (16) | `0x90` (144) | Two-way, telemetry + commands |
-| **tunnel** | `0x20` (32) | `0xa0` (160) | Two-way, IP over WiFi Broadcast |
+| Channel | Drone TX stream | GS TX stream | Type | Description |
+|---------|-----------------|--------------|------|-------------|
+| **video** | `0x00` (0) | — | `udp_direct_tx` | One-way, drone to GS |
+| **mavlink** | `0x10` (16) | `0x90` (144) | `mavlink` | Two-way, validates mavlink framing |
+| **tunnel** | `0x20` (32) | `0xa0` (160) | `tunnel` | Two-way, IP over WiFi Broadcast |
+| **serial** | `0x30` (48) | `0xb0` (176) | `udp_proxy` | Two-way, raw bytes (no parsing) |
 
 ---
 
@@ -172,6 +173,54 @@ peer = 'connect://127.0.0.1:14550'     # GS sends telemetry to QGroundControl
 ```ini
 osd = 'connect://127.0.0.1:14551'
 ```
+
+### Raw serial / UDP proxy (bidirectional)
+
+A raw bidirectional UDP pipe with no protocol parsing. Use this for
+serial-over-Ethernet bridges or any data that is not mavlink-formatted.
+Unlike the mavlink channel, this passes all bytes unmodified.
+
+To add a raw serial channel, append a stream to the `[drone]` and `[gs]`
+top-level profiles in `/etc/wifibroadcast.cfg`:
+
+**Drone config:**
+
+```ini
+[drone]
+streams = [...,
+           {'name': 'serial', 'stream_rx': 0xb0, 'stream_tx': 0x30,
+            'service_type': 'udp_proxy',
+            'profiles': ['base', 'drone_base', 'radio_base'],
+            'peer': 'listen://0.0.0.0:7000'}]
+```
+
+The drone listens on UDP 7000. Your serial-to-Ethernet bridge sends data here.
+
+**GS config:**
+
+```ini
+[gs]
+streams = [...,
+           {'name': 'serial', 'stream_rx': 0x30, 'stream_tx': 0xb0,
+            'service_type': 'udp_proxy',
+            'profiles': ['base', 'gs_base', 'radio_base'],
+            'peer': 'connect://127.0.0.1:7001'}]
+```
+
+The GS forwards received serial data to UDP 7001, and sends data received
+from port 7001 back over the air to the drone.
+
+**Important:** You cannot simply add these to `wifibroadcast.cfg` as
+separate sections — they must be appended to the existing `streams` list
+in the `[drone]` and `[gs]` top-level profiles. To do this, override the
+full `[drone]` or `[gs]` section in your config (copy from the master
+config and add the new stream entry).
+
+**FEC defaults (from `radio_base`):** K=1, N=2 (every packet duplicated).
+
+**Why not use the mavlink channel?** The mavlink channel uses
+`MavlinkUDPProxyProtocol` which parses and validates mavlink framing. Raw
+serial bytes that are not valid mavlink frames are silently discarded.
 
 ### IP tunnel (bidirectional)
 
