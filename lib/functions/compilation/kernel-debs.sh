@@ -401,9 +401,13 @@ function kernel_package_callback_linux_headers() {
 	# Find the files we want to include in the package. Those will be later cleaned, etc.
 	(
 		cd "${kernel_work_dir}" || exit 2
+		# bsp/include exists only in some BSP trees (e.g. Allwinner); omit when absent so find does not fail.
+		bsp_include=()
+		[[ -d bsp/include ]] && bsp_include+=(bsp/include)
+
 		find . -name Makefile\* -o -name Kconfig\* -o -name \*.pl
 
-		find arch/*/include include scripts bsp/include -type f -o -type l
+		find arch/*/include include scripts "${bsp_include[@]}" -type f -o -type l
 
 		find security/*/include -type f
 		[[ -d "arch/${SRC_ARCH}" ]] && {
@@ -412,7 +416,7 @@ function kernel_package_callback_linux_headers() {
 			find $(find "arch/${SRC_ARCH}" -name include -o -name scripts -type d) -type f
 			find arch/${SRC_ARCH}/include -type f
 		}
-		find Module.symvers include scripts bsp/include -type f
+		find Module.symvers include scripts "${bsp_include[@]}" -type f
 		find . -name "bitsperlong.h" -type f
 
 		# tools/include/tools has the byteshift utilities shared between kernel proper and the build scripts/tools.
