@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Add a static IP to a remote device's ethernet interface.
+"""Add or remove a static IP on a remote device's ethernet interface.
 
 Usage:
     # Query only — show current ethernet config
@@ -8,14 +8,21 @@ Usage:
     # Interactive — prompt before applying
     ./add-static-ip.py root@192.168.100.246 --ip 192.168.101.1
 
+    # Remove a previously added static IP (undo)
+    ./add-static-ip.py root@192.168.100.246 --remove 192.168.101.1
+
     # From YAML config — no prompt
     ./add-static-ip.py root@192.168.100.246 --config static-ip.yaml
 
-YAML config example:
+YAML config example (add):
     ip: 192.168.101.1
     prefix: 17          # optional, detected from current connection
     gateway: 192.168.0.1  # optional, detected
     dns: 192.168.0.1      # optional, detected
+
+YAML config example (remove):
+    remove: true
+    ip: 192.168.101.1
 """
 
 import argparse
@@ -150,6 +157,35 @@ def add_static_ip(target: str, info: dict, ip: str, prefix: str = "",
     print()
 
 
+def remove_static_ip(target: str, info: dict, ip: str, skip_prompt: bool = False) -> None:
+    """Remove a static IPv4 address from the connection (nmcli -ipv4.addresses)."""
+    host = ip.split("/")[0]
+    to_remove = [a for a in info["static_addresses"] if a.split("/")[0] == host]
+    if not to_remove:
+        print(
+            f"ERROR: No static address matching '{ip}' on connection '{info['connection']}'.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    con = info["connection"]
+    print(f"  Removing static IP(s): {', '.join(to_remove)}")
+    print(f"  Connection            : {con}")
+    print()
+
+    if not skip_prompt:
+        answer = input("\n  Proceed? [y/N] ").strip().lower()
+        if answer != "y":
+            print("  Aborted.")
+            return
+
+    parts = [f'nmcli con mod "{con}" -ipv4.addresses "{cidr}"' for cidr in to_remove]
+    parts.append(f'nmcli con up "{con}"')
+    ssh_run(target, " && ".join(parts))
+    print("  Done.")
+    print()
+
+
 def load_yaml_config(path: str) -> dict:
     if yaml is None:
         print("ERROR: PyYAML is required for --config. Install with: pip install pyyaml", file=sys.stderr)
@@ -160,18 +196,26 @@ def load_yaml_config(path: str) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Add a static IP to a remote device's ethernet interface.",
+        description="Add or remove a static IP on a remote device's ethernet interface.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
     parser.add_argument("target", help="SSH target (e.g. root@192.168.100.246)")
     parser.add_argument("--query", action="store_true", help="Only show current config, don't modify")
     parser.add_argument("--ip", help="Static IP to add (e.g. 192.168.101.1)")
+    parser.add_argument(
+        "--remove",
+        metavar="IP",
+        help="Remove this static IP from the connection (undo; host or CIDR)",
+    )
     parser.add_argument("--prefix", help="Subnet prefix length (default: auto-detect from current)")
     parser.add_argument("--gateway", help="Gateway (default: auto-detect from current)")
     parser.add_argument("--dns", help="DNS server (default: auto-detect from current)")
     parser.add_argument("--config", help="YAML config file with connection details (skips prompt)")
     args = parser.parse_args()
+
+    if args.ip and args.remove:
+        parser.error("--ip and --remove cannot be used together")
 
     print(f"\nQuerying {args.target} ...")
     info = query_connection(args.target)
@@ -185,14 +229,28 @@ def main():
     gateway = args.gateway or ""
     dns = args.dns or ""
     skip_prompt = False
+    remove_mode = bool(args.remove)
 
     if args.config:
         cfg = load_yaml_config(args.config)
+        if cfg.get("remove"):
+            remove_mode = True
         ip = str(cfg.get("ip", ip))
         prefix = str(cfg.get("prefix", prefix))
         gateway = str(cfg.get("gateway", gateway))
         dns = str(cfg.get("dns", dns))
         skip_prompt = True
+
+    if remove_mode:
+        rm_ip = args.remove or ip
+        if not rm_ip:
+            print(
+                "ERROR: --remove IP or --config with remove: true and ip: is required",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        remove_static_ip(args.target, info, rm_ip, skip_prompt=skip_prompt)
+        return
 
     if not ip:
         print("ERROR: --ip or --config is required when not using --query", file=sys.stderr)
