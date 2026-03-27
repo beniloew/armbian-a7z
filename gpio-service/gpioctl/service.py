@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import select
-import signal
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -139,11 +138,6 @@ class GpioCtl:
 
         config = self._build_line_config()
 
-        prev_sigterm = signal.getsignal(signal.SIGTERM)
-        prev_sigint = signal.getsignal(signal.SIGINT)
-        signal.signal(signal.SIGTERM, lambda *_: self.stop())
-        signal.signal(signal.SIGINT, lambda *_: self.stop())
-
         _LOG.info(
             "starting: chip=%s inputs=[%s] outputs=[%s]",
             self._chip,
@@ -161,8 +155,6 @@ class GpioCtl:
             for p in self._pwms:
                 p.close()
             self._unbind_all()
-            signal.signal(signal.SIGTERM, prev_sigterm)
-            signal.signal(signal.SIGINT, prev_sigint)
 
         _LOG.info("shutdown complete")
 

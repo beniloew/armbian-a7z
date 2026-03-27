@@ -81,28 +81,19 @@ class HwPwmPin:
         self._exported = False
 
     def configure(
-        self, period_ns: int, duty_ns: int = 0, polarity: str = "normal"
+        self, period_ns: int, duty_ns: int = 0,
     ) -> None:
-        """Export the channel (if needed) and set polarity, period + duty cycle.
-
-        *polarity* must be ``"normal"`` or ``"inversed"``.  Polarity can only
-        be changed while the channel is disabled, so this method disables first.
-        """
+        """Export the channel (if needed) and set period + duty cycle."""
         if not self._exported:
             self._export()
         try:
             self._write("enable", 0)
         except OSError:
             pass
-        self._write_str("polarity", polarity)
-        self._write("duty_cycle", 0)
         self._write("period", period_ns)
         if duty_ns:
             self._write("duty_cycle", duty_ns)
-        self.logger.debug(
-            "configured polarity=%s period=%d ns, duty=%d ns",
-            polarity, period_ns, duty_ns,
-        )
+        self.logger.debug("configured period=%d ns, duty=%d ns", period_ns, duty_ns)
 
     def set_duty_ns(self, ns: int) -> None:
         self._write("duty_cycle", ns)
@@ -126,9 +117,6 @@ class HwPwmPin:
 
     def _write(self, attr: str, value: int) -> None:
         (self._ch_path / attr).write_text(str(value))
-
-    def _write_str(self, attr: str, value: str) -> None:
-        (self._ch_path / attr).write_text(value)
 
     def __repr__(self) -> str:
         return f"HwPwmPin({self.name!r}, chip={self.chip}, channel={self.channel})"

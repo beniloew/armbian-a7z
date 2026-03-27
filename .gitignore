@@ -48,8 +48,12 @@ Dockerfile
 
 # Overlay files tracked in git
 !/userpatches/overlay/
+!/userpatches/overlay/authorized_keys
 !/userpatches/overlay/wfb-ng/
 !/userpatches/overlay/wfb-ng/README.md
+
+# Build artifact: copied from gpio-service/ by build.sh
+userpatches/overlay/gpio-service/
 
 # Cached driver artifacts (binary, local-only)
 userpatches/overlay/wfb-ng/*.ko
